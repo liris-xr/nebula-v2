@@ -1,6 +1,6 @@
-# Nebula — Unity driver
+# Nebula 
 
-Control a Nebula 2.0 olfactory device from Unity over **Serial (USB)** or **BLE**.
+Control a Nebula olfactory device from Unity over **Serial (USB)** or **BLE**.
 
 The code is split in two independent layers:
 
@@ -34,20 +34,6 @@ Runtime/
 3. To trigger smells by proximity: put `NebulaPlayerHead` on your VR camera, and
    `NebulaOdorZone` on each odor object (give it a trigger collider and pick an atomizer).
 
-Drive it from code anywhere:
-
-```csharp
-NebulaManager.Instance.Configure(NebulaAtomizer.L1, periodMs: 100, dutyCyclePercent: 30);
-NebulaManager.Instance.StartDiffusion(NebulaAtomizer.L1);
-// ...
-NebulaManager.Instance.StopDiffusion(NebulaAtomizer.L1);
-```
-
-//broke ftm
-React to connection / firmware messages via the Inspector events on `NebulaManager`
-(`On Device Connected`, `On Device Disconnected`, `On Message Received`) or in code with
-`NebulaManager.Instance.onMessageReceived.AddListener(...)`.
-
 ## BLE on Windows
 
 BLE uses [BleWinrtDll](https://github.com/adabru/BleWinrtDll):
@@ -58,11 +44,6 @@ BLE uses [BleWinrtDll](https://github.com/adabru/BleWinrtDll):
 
 Without the define, the serial transport still works; BLE simply isn't created.
 
-The manager sends `S` (stop all) and gives the write a moment to leave before closing the
-link on quit. For extra safety, the firmware should also stop its atomizers when it detects
-a disconnection.
-
 ## Platform support
 
-Windows / Unity Editor (serial + BLE) today. The `Transports/Ble/` folder is ready to host
-an Android (Quest) transport later.
+Windows / Unity Editor (serial + BLE).
