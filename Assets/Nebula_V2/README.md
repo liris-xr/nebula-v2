@@ -43,6 +43,7 @@ NebulaManager.Instance.StartDiffusion(NebulaAtomizer.L1);
 NebulaManager.Instance.StopDiffusion(NebulaAtomizer.L1);
 ```
 
+//broke ftm
 React to connection / firmware messages via the Inspector events on `NebulaManager`
 (`On Device Connected`, `On Device Disconnected`, `On Message Received`) or in code with
 `NebulaManager.Instance.onMessageReceived.AddListener(...)`.
