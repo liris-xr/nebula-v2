@@ -1,0 +1,29 @@
+{
+  "name": "com.lirisxr.nebula",
+  "version": "0.1.0",
+  "displayName": "Nebula",
+  "description": "Control a Nebula olfactory device from Unity over Serial (USB) or BLE. BLE is wired through the shared com.lirisxr.blebridge package, so it can coexist with StimulHeat in the same project.",
+  "unity": "2022.3",
+  "samples": [
+    {
+      "displayName": "Demo",
+      "description": "Contains a desktop OnGUI demo to connect to and command a Nebula device over Serial or BLE, switching transport from the toolbar.",
+      "path": "Samples~/Demo"
+    },
+    {
+      "displayName": "VR Demo",
+      "description": "Distance-triggered odor diffusion scripts ported from nebula-v2. No XR Toolkit dependency and no physics setup: NebulaPlayerHead registers the player head as the odor detector and NebulaOdorZone starts/stops diffusion on head-to-object distance, with an optional linear duty-by-distance mode. NebulaVRBootstrap connects the NebulaManager over BLE on start.",
+      "path": "Samples~/VR"
+    }
+  ],
+  "documentationUrl": "",
+  "changelogUrl": "",
+  "licensesUrl": "",
+  "dependencies": {
+    "com.lirisxr.blebridge": "0.1.0"
+  },
+  "author": {
+    "name": "LIRIS-XR",
+    "email": ""
+  }
+}
