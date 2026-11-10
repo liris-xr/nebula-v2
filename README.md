@@ -1,49 +1,85 @@
-# Nebula 
+# Nebula (`com.lirisxr.nebula`)
 
-Control a Nebula olfactory device from Unity over **Serial (USB)** or **BLE**.
+Unity package to control a **Nebula** olfactory device (4-channel atomizer diffuser) from Unity,
+over Serial (USB) or BLE. Includes a desktop demo and a VR sample for distance-driven odor
+diffusion, ported from the original
+[`liris-xr/nebula-v2`](https://github.com/liris-xr/nebula-v2).
 
-The code is split in two independent layers:
+## Relation to the BLE Bridge
 
-- **Driver** (`Protocol/`, `Transports/`, `NebulaManager`, `NebulaDevice`) — talks to the
-  device. Reusable on its own, no VR or gameplay dependency.
-- **Odor layer** (`Odor/`) — optional Unity gameplay: trigger-based diffusion driven by the
-  player's head. Uses the driver; you can ignore or replace it.
+Nebula supports two transports (`Serial` and `Ble`, chosen on `NebulaManager` or via `Connect()`).
+The BLE transport does **not** talk to BLE hardware itself: it is wired through the shared
+**[`com.lirisxr.blebridge`](https://github.com/liris-xr/multisensory-bridge)** package,
+which this package depends on (`com.lirisxr.blebridge` is declared in `package.json`, so UPM
+installs it automatically).
 
-## Structure
+How the two relate:
 
+- **The bridge owns the native stack.** `NebulaBleTransport` requests an `IBleLink` from the
+  bridge's `BleConnectionManager` with a `BleDeviceProfile` for the advertised name `"Nebula"`,
+  service `0x180C` and characteristic `0x2A56`. Scanning, connecting, subscribing and writing
+  are all done by the bridge; Nebula only sends commands and receives firmware messages over
+  the link.
+- **No native DLL shipping.** Nebula ships no `BleWinrtDll.dll` and no Android jar, and never
+  calls the native `Quit()`. Before the bridge existed, Nebula and StimulHeat each bound the
+  same Windows BLE library and could not coexist in one project (duplicate DLL, and one
+  package's `Quit()` tore the other's connection down). The bridge is now the single owner, so
+  Nebula and StimulHeat can be used together.
+- **Automatic platform coverage.** Because the bridge picks its backend from the build target
+  (Windows/Editor: `BleWinrtDll`; Android: Velorexe), Nebula's BLE transport works on Windows
+  and Android unchanged, with no scripting defines.
+- **Shared scan.** The bridge runs one scan and routes devices by name + service UUID, so the
+  Nebula device is discovered alongside StimulHeat's devices without competing scanners.
+- **Serial is independent.** The `Serial` transport (`NebulaSerialTransport`) does not involve
+  the bridge at all.
+
+If you use BLE, keep the bridge installed; see the bridge repo for platform setup (Android
+permissions manifest wizard, entry point, etc.).
+
+## Installation
+
+Unity 2022.3+. Add this package via the Unity Package Manager (git URL or local path). The BLE
+bridge dependency is pulled in automatically.
+
+## Usage
+
+Add a `NebulaManager` to the scene, then:
+
+```csharp
+nebulaManager.transport = NebulaTransportKind.Ble;   // or Serial
+nebulaManager.deviceName = "Nebula";                  // advertised BLE name / serial port
+nebulaManager.Connect();
+
+nebulaManager.StartDiffusion(NebulaAtomizer.L1);
+nebulaManager.StopDiffusion(NebulaAtomizer.L2);
+nebulaManager.Configure(NebulaAtomizer.L1, periodMs: 1000, dutyCyclePercent: 50);
+nebulaManager.StopAll();
 ```
-Runtime/
-├── Protocol/NebulaProtocol.cs        Firmware command language (single source of truth)
-├── NebulaDevice.cs                   Connected-device info (passed to events)
-├── Transports/
-│   ├── INebulaTransport.cs           Transport contract
-│   ├── NebulaSerialTransport.cs      Serial (Windows/Editor)
-│   └── Ble/
-│       ├── NebulaBleTransportBase.cs Shared BLE logic
-│       └── NebulaBleWindowsTransport.cs  BLE via BleWinrtDll
-├── NebulaManager.cs                  Entry point: 1 transport, events, typed API
-└── Odor/
-    ├── NebulaPlayerHead.cs           Marks the player's head as the odor detector
-    └── NebulaOdorZone.cs             Diffuses while the head is inside its trigger
-```
 
-## Quick start
+`onDeviceConnected` / `onDeviceDisconnected` / `onMessageReceived` are UnityEvents; commands can
+also be sent directly with `SendCommand(string)`. BLE connection, reconnection and incoming
+message queuing are handled internally (`autoReconnect`, `reconnectDelaySeconds`).
 
-1. Add a `NebulaManager` to your scene (one is enough — it survives scene loads).
-2. Pick the **Transport** (Serial or BLE) and set the **Device Name** (default `Nebula`).
-3. To trigger smells by proximity: put `NebulaPlayerHead` on your VR camera, and
-   `NebulaOdorZone` on each odor object (give it a trigger collider and pick an atomizer).
+## Samples
 
-## BLE on Windows
+Import from the Package Manager ("Import samples" on Nebula):
 
-BLE uses [BleWinrtDll](https://github.com/adabru/BleWinrtDll):
+- **Demo** (`Samples~/Demo`) — `NebulaBleDemo.cs`, a desktop OnGUI control of the 4 atomizers
+  with period/duty sliders, switching transport from the toolbar. Works on Windows and Android
+  unchanged.
+- **VR Demo** (`Samples~/VR`) — distance-triggered odor diffusion, no XR Toolkit dependency and
+  no physics setup: diffusion is driven purely by the distance between the player's head and the
+  zone (head = the scene's main camera, or `headOverride`).
+  - `NebulaVRBootstrap` — put on any scene GameObject. Calls `NebulaManager.Connect()` on start
+    with `transport = Ble`, `deviceName`, and `autoReconnect = true`.
+  - `NebulaOdorZone` — put on an odor-emitting object. While the head is within
+    `triggerDistance` metres, it starts diffusion on the chosen `Atomizer`. Two modes:
+    `Binary` (fixed duty) and `Linear` (duty scales with head-to-object distance between
+    `distanceAtMaxDuty` and `distanceAtMinDuty`, updated every `updateInterval`).
 
-1. Import BleWinrtDll (x64 DLL + `BleApi.cs`); keep its asmdef **Auto Referenced**.
-2. Add the define `NEBULA_BLE_WINRT` in *Player Settings → Scripting Define Symbols*.
-3. Build target **x64**, Windows 10+ with Bluetooth on.
-
-Without the define, the serial transport still works; BLE simply isn't created.
-
-## Platform support
-
-Windows / Unity Editor (serial + BLE).
+VR setup:
+1. In the scene, add a `NebulaManager` and a `NebulaVRBootstrap` (with the device name).
+2. On each object that emits odor, add `NebulaOdorZone`, then set the `Atomizer`, `Mode`,
+   `Trigger Distance`, period and duty fields.
+3. Run on Android (or Windows). When the player's head comes within `Trigger Distance` of an
+   odor zone, the Nebula atomizer diffuses; when it moves away, it stops.
